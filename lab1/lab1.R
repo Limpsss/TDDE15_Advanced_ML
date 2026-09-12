@@ -50,7 +50,7 @@ graphviz.plot(true_dag)
 
 # Learn parameters using maximum likelihood estimation
 hc_dag_fit <- bn.fit(hc_dag, data=train, method="mle")
-true_dag_fit <- bn.fit(hc_dag, data=train, method="mle")
+true_dag_fit <- bn.fit(true_dag, data=train, method="mle")
 
 # Convert the bn.fit object to a gRain
 hc_grain <- as.grain(hc_dag_fit)
