@@ -16,8 +16,7 @@ library(gRain)
 ```{r, include=FALSE}
 data("asia")
 ```
-Show that multiple runs of the hill-climbing algorithm can return non-equivalent Bayesian
-network (BN) structures. Explain why this happens.
+**Show that multiple runs of the hill-climbing algorithm can return non-equivalent Bayesian network (BN) structures. Explain why this happens.**
 
 
 ## Hill Climbing with Different Scores
@@ -51,8 +50,6 @@ all.equal(cpdag(dag1), cpdag(dag2))
 ```
 
 
-
-
 ## Hill Climbing with Random Initial Structures
 
 ```{r}
@@ -69,13 +66,13 @@ all.equal(cpdag(dag1), cpdag(dag2))
 ```
 
 
-Using different score methods, imaginary sample size, or initial structures when running the hill climb algorithm yields non-equivalent Bayesian networks. This is shown by the plots and by converting the DAGs to equivalence classes by using cpdag() function and comparing them using all.equal(). This checks if two DAGs belong to the same equivalence class. 
+Using different score methods, imaginary sample size, or initial structures when running the hill climb algorithm yields non-equivalent Bayesian networks. This is shown by the plots and by converting the DAGs to equivalence classes by using $cpdag()$ function and comparing them using $all.equal()$. This checks if two DAGs belong to the same equivalence class. 
 
 The reason why hill climbing algorithm can yield non-equivalent structures is because it is a greedy algorithm which can and often will get stuck in local optima.
 
 
 # Question 2
-Learn a BN from 80 % of the Asia dataset. Use the BN learned to classify the remaining 20 % of the Asia dataset in two classes: S = yes and S = no. In other words, compute the posterior probability distribution of S for each case and classify it in the most likely class.
+**Learn a BN from 80 % of the Asia dataset. Use the BN learned to classify the remaining 20 % of the Asia dataset in two classes: $S$ = yes and $S$ = no. In other words, compute the posterior probability distribution of $S$ for each case and classify it in the most likely class.**
 
 ```{r}
 n <- dim(asia)[1]
@@ -102,7 +99,8 @@ true_grain <- as.grain(true_dag_fit)
 ```
 
 ## Classification
-This function classifies the test data set. It takes the grain model (HC, or true DAG) and the observed nodes in order to calculate the posterior probability and then predict the class based onj that probability. 
+This function classifies the test data set. It takes a gRain model and a set of observed node names, then for each test case computes the posterior probability of $S$ given the observed evidence, predicting "yes" if $P(S=\text{yes}) > 0.5$ and "no" otherwise.
+
 ```{r}
 classifier <- function(model, observed_nodes) {
   preds <- numeric(nrow(test))
@@ -129,6 +127,7 @@ table(test$S, true_model_preds)
 As shown above, the confusion matrices are identical. When predicting $S$ using all remaining nodes as evidence, we observe $S$'s Markov Blanket (node $L$ and $B$). As can be seen in the plot, both the learned DAG and the true DAG capture the exact same local joint distribution around $S$, $L$, and $B$. In a Bayesian Network, a target node is conditionally independent of all other nodes in the network given its Markov Blanket. So even though some edge configurations (around node $T, E, X,$) differ, they are conditionally independent of $S$ and have no effect on $S$.
 
 # Question 3
+**Now, you are asked to classify $S$ given observations only for the so-called Markov blanket of $S$**
 
 ```{r}
 hc_mb <- mb(hc_dag_fit, node="S")
@@ -141,13 +140,16 @@ true_mb_preds <- classifier(true_grain, true_mb)
 table(test$S, true_mb_preds)
 ```
 
-Here the confusion matrices are also identical. This is because the learned DAG share the same markov blanket as the true DAG.
+Here the confusion matrices are also identical. This is because the learned DAG 
+share the same markov blanket as the true DAG, so the evidence outside the markov
+blanket doesn't affect the posterior probability of $S$.
 
 # Question 4
+**Repeat the exercise (2) using a naive Bayes classifier**
 
 ```{r}
 nbc_network <- model2network("[S][A|S][T|S][L|S][B|S][E|S][X|S][D|S]")
-graphviz.plot(nbc_network)
+graphviz.plot(nbc_network, main = "Naive bayes classifier model")
 
 nbc_fit <- bn.fit(nbc_network, data=train, method="mle")
 nbc_grain <- as.grain(nbc_fit)
@@ -156,8 +158,14 @@ nbc_preds <- classifier(nbc_grain, nodes)
 table(test$S, nbc_preds)
 ```
 
-<!-- Write your discussion here -->
-
 # Question 5
-"Explain why you obtain the same or different results in the exercises (2-4)."
-<!-- Write your discussion here -->
+**Explain why you obtain the same or different results in the exercises (2-4).**
+
+Exercises 2 and 3 produce the same results because both the learned HC DAG and 
+the true DAG share the same Markov blanket for $S$. By the conditional independence 
+property of BNs, P(S | evidence) depends only on evidence of $S$'s Markov blanket.
+
+Exercise 4 differs because the Naive Bayes classifier assumes all features are 
+conditionally independent given $S$, removing edges like T→E and B→D. The true DAG
+has dependencies between features that are lost under the naive Bayes assumption.
+This assumption leads to different (worse) posterior estimates for $S$.
