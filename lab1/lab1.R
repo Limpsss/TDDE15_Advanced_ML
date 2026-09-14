@@ -4,30 +4,27 @@ data("asia")
 
 # --------------------------------- 1 ---------------------------------
 
-# HC with different score
+# Learn structure using HC with different score
 dag1 <- hc(asia, score="bde")
 dag2 <- hc(asia, score="aic")
 graphviz.plot(dag1)
 graphviz.plot(dag2)
 all.equal(cpdag(dag1), cpdag(dag2))
-score(dag1, asia, type="bde") == score(dag2, asia, type="bde")
 
-# HC with different imaginary sample size
+# Learn structure using HC with different imaginary sample size
 dag1 <- hc(asia, score="bde", iss=5)
 dag2 <- hc(asia, score="bde", iss=10)
 graphviz.plot(dag1)
 graphviz.plot(dag2)
 all.equal(cpdag(dag1), cpdag(dag2))
-score(dag1, asia, type="bde") == score(dag2, asia, type="bde")
 
-# HC with random initial structure
+# Learn structure using HC with random initial structure
 set.seed(12345)
 dag1 = hc(asia, score="bde", start=random.graph(colnames(asia)))
 dag2 = hc(asia, score="bde", start=random.graph(colnames(asia)))
 graphviz.plot(dag1)
 graphviz.plot(dag2)
 all.equal(cpdag(dag1), cpdag(dag2))
-score(dag1, asia, type="bde") == score(dag2, asia, type="bde")
 
 # Using different score methods, imaginary sample size, or initial structures
 # yields in non-equivalent Bayesian networks, as shown by the plots and by the
@@ -48,15 +45,15 @@ true_dag <- model2network("[A][S][T|A][L|S][B|S][D|B:E][E|T:L][X|E]")
 graphviz.plot(hc_dag)
 graphviz.plot(true_dag)
 
-# Learn parameters using maximum likelihood estimation
+# Fit parameters using maximum likelihood estimation
 hc_dag_fit <- bn.fit(hc_dag, data=train, method="mle")
 true_dag_fit <- bn.fit(true_dag, data=train, method="mle")
 
-# Convert the bn.fit object to a gRain
+# Convert both fitted networks to gRain objects for exact inference
 hc_grain <- as.grain(hc_dag_fit)
 true_grain <- as.grain(true_dag_fit)
 
-# Classify the test set on a given model
+# Classifies the test set: S = "yes" if P(S = yes | evidence) > 0.5, else "no"
 classifier <- function(model, observed_nodes) {
   preds <- numeric(nrow(test))
   for(i in 1:nrow(test)) {
@@ -66,34 +63,32 @@ classifier <- function(model, observed_nodes) {
     evidence <- setEvidence(model, nodes=observed_nodes, states=states)
     # Query posterior probability distribution of node S
     pred <- querygrain(evidence, nodes="S")$S
-    # Predict "yes" if probability of "yes" greater than 0.5
     preds[i] <- ifelse(pred["yes"] > 0.5, "yes", "no")
   }
   return(preds)
 }
 
-# observed nodes (all but S)
-nodes <- colnames(test[-2]) # remove node S
+# Use all nodes except S (column 2) as evidence
+nodes <- colnames(test[-2])
 
-# Classify hc model using observed nodes
+# Classify with the network learned by hill climbing
 hc_model_preds <- classifier(hc_grain, nodes)
 table(test$S, hc_model_preds)
 
-# Classify true model using observed nodes
+# Classify with the true network
 true_model_preds <- classifier(true_grain, nodes)
 table(test$S, true_model_preds)
 
 # --------------------------------- 3 ---------------------------------
 
-# Get market blanket for hc model and true model
+# Restrict the evidence to the Markov blanket of S only
 hc_mb <- mb(hc_dag_fit, node="S")
 true_mb <- mb(true_dag_fit, node="S")
 
-# Classify hc model using only market blanked nodes
+# Classify using the Markov blanket as observed nodes
 hc_mb_preds <- classifier(hc_grain, hc_mb)
 table(test$S, hc_mb_preds)
 
-# Classify true model using only market blanked nodes
 true_mb_preds <- classifier(true_grain, true_mb)
 table(test$S, true_mb_preds)
 
@@ -106,11 +101,11 @@ table(test$S, true_mb_preds)
 nbc_network <- model2network("[S][A|S][T|S][L|S][B|S][E|S][X|S][D|S]")
 graphviz.plot(nbc_network)
 
-# Convert the bn.fit object to a gRain
+# Fit the network and convert to a gRain model.
 nbc_fit <- bn.fit(nbc_network, data=train, method="mle")
 nbc_grain <- as.grain(nbc_fit)
 
-# Classify nbc model using observed nodes
+# Classify the test set with the naive Bayes classifier.
 nbc_preds <- classifier(nbc_grain, nodes)
 table(test$S, nbc_preds)
 
