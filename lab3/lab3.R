@@ -72,7 +72,12 @@ GreedyPolicy <- function(x, y){
   # Returns:
   #   An action, i.e. integer in {1,2,3,4}.
   
-  # Your code here.
+  # Values for each action in given state
+  q_values <- q_table[x, y, ]
+  # Action(s) which has highest q_value
+  best_actions <- which(q_values == max(q_values))
+  # Handle ties if exists
+  action <- best_actions[sample.int(length(best_actions), 1)]
   
 }
 
@@ -88,7 +93,14 @@ EpsilonGreedyPolicy <- function(x, y, epsilon){
   #   An action, i.e. integer in {1,2,3,4}.
   
   # Your code here.
-  
+  if(runif(1) < epsilon) {
+    # Random action
+    action <- sample.int(4, 1)
+  } else {
+    # Greedy policy
+    action <- GreedyPolicy(x, y)    
+  }
+  return(action)
 }
 
 transition_model <- function(x, y, action, beta){
@@ -136,11 +148,29 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
   #   a global variable can be modified with the superassigment operator <<-.
   
   # Your code here.
-  
+  state <- start_state
+  episode_correction <- 0
   repeat{
     # Follow policy, execute action, get reward.
+    action <- EpsilonGreedyPolicy(state[1], state[2], epsilon)
+    new_state <- transition_model(state[1], state[2], action, beta)
+    reward <- reward_map[new_state[1], new_state[2]]
     
-    # Q-table update.
+    # q_value of current  state-action pair 
+    curr_value <- q_table[state[1], state[2], action]
+    # q_value of best action in new state
+    next_value <- max(q_table[new_state[1], new_state[2], ])
+    # the transition "error" based on the reward plus the best estimated future value
+    delta <- reward + gamma * next_value - curr_value
+    
+    # Q-table update by adding product of "error" and alpha.
+    q_table[state[1], state[2], action] <<-
+      q_table[state[1], state[2], action] + alpha * delta
+    
+    # episode correction accumulated
+    episode_correction <- episode_correction + alpha * delta
+    # update state
+    state <- new_state
     
     if(reward!=0)
       # End episode.
@@ -206,7 +236,7 @@ for(j in c(0.5,0.75,0.95)){
     reward <- c(reward,foo[1])
     correction <- c(correction,foo[2])
   }
-  
+
   vis_environment(i, gamma = j)
   plot(MovingAverage(reward,100),type = "l")
   plot(MovingAverage(correction,100),type = "l")
@@ -248,4 +278,5 @@ for(j in c(0,0.2,0.4,0.66)){
     foo <- q_learning(gamma = 0.6, beta = j, start_state = c(1,1))
   
   vis_environment(i, gamma = 0.6, beta = j)
+  print(q_table)
 }
