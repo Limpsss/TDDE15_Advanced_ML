@@ -26,7 +26,7 @@ The grid-world is a fully observable, episodic Markov decision process. The agen
 
 The agent starts each episode at state (3, 1). The goal reward is +10 at (3, 6), and states (2, 3), (3, 3) and (4, 3) have reward -1. The Q-table and learned greedy policy after training are shown below.
 
-```{r env-a, ref.label=c("app-qlearning-functions", "app-env-a"), echo=FALSE, fig.width=9.5, fig.height=6.8, out.width="\\textwidth"}
+```{r env-a, ref.label=c("app-qlearning-functions", "app-env-a"), echo=FALSE, cache=TRUE, fig.width=9.5, fig.height=6.8, out.width="\\textwidth"}
 ```
 
 **What has the agent learned after the first 10 episodes?**
@@ -48,47 +48,81 @@ Environment B has negative-reward top and bottom rows, a +5 reward and a +10 rew
 
 ## Effects of gamma with epsilon = 0.5
 
-```{r env-b-eps05, ref.label="app-env-b-eps05", echo=FALSE, cache=TRUE, fig.width=9.5, fig.height=8.3, out.width="\\textwidth"}
+```{r env-b-eps05, ref.label="app-env-b-eps05", echo=FALSE, cache=TRUE, dependson="env-a", fig.width=9.5, fig.height=8.3, out.width="\\textwidth"}
 ```
 
-Increasing gamma makes future rewards more influential, so the agent is more willing to take a longer route to the +10 reward instead of stopping at the nearer +5 reward. With gamma = 0.5 and 0.75, we can see that the nearer 5 reward is preferred. With gamma 0.95 makes the farther route 10 worth going to.
+Increasing gamma makes future rewards count more, so the agent is more willing to take the longer route to the +10 instead of stopping at the +5. With gamma = 0.5 and 0.75 the agent goes for the 5, and with gamma = 0.95 it walks around the 5 to get to the 10.
 
-```{r env-b-eps01, ref.label="app-env-b-eps01", echo=FALSE, cache=TRUE, fig.width=9.5, fig.height=8.3, out.width="\\textwidth"}
+From the start state the 5 is 4 steps away and the 10 is 9 steps away (it has to walk around the 5), so the values are roughly $\gamma^3 \cdot 5$ vs $\gamma^8 \cdot 10$:
+
+| gamma | value of going to +5 | value of going to +10 |
+|:-----:|:--------------------:|:---------------------:|
+| 0.5   | 0.63                 | 0.04                  |
+| 0.75  | 2.11                 | 1.00                  |
+| 0.95  | 4.29                 | 6.63                  |
+
+So the 10 is only worth the detour when gamma = 0.95. These numbers also show up in the Q-tables, the best action in the start state has value 0.62, 2.11 and 6.63 for the three gammas. With gamma 0.5 and 0.75 the states close to the 10 still point toward it, since from there the 10 is the better one.
+
+For gamma = 0.95 the reward plot shows a clear jump around episode 13 500, from about 4.5 to about 6.5. That's when the agent finds the route to the 10. The correction plot spikes at the same time, because the Q-values along the new route are off and it takes a few thousand episodes for them to settle.
+
+## Effects of gamma with epsilon = 0.1
+
+```{r env-b-eps01, ref.label="app-env-b-eps01", echo=FALSE, cache=TRUE, dependson=c("env-a", "env-b-eps05"), fig.width=9.5, fig.height=8.3, out.width="\\textwidth"}
 ```
 
-With epsilon = 0.1, it chooses randomly only 10% of the time. Finding the route to the 10 reward requires a lot of exploration around the easy way to reward 10. The agent learns the route to 5 and keeps taking it, and rarely ever reaches 10, leading to no or few experiences of that reward to propagate back through the Q-table.
+With epsilon = 0.1 the agent only acts randomly 10% of the time. To find the 10 it has to get around the 5 by chance, which takes a lot of random moves in a row, so it almost never happens. The agent learns the route to the 5 early and keeps taking it, for all three gammas. You can see this as most states to the right of the 5 are still 0, meaning they were rarely visited.
+
+For gamma = 0.5 and 0.75 this doesn't matter much, since the 5 is the better choice anyway. But for gamma = 0.95, going to the 10 would be worth 6.63 from the start, but the agent never explores enough to find out, so it settles for the 5 (4.29).
 \pagebreak
 
 ## 1.3 Environment C: effect of beta
 
 Environment C places a +10 reward beyond a sequence of negative-reward states. The experiment compares beta values 0, 0.2, 0.4 and 0.66, with epsilon 0.5 and gamma 0.6. Beta controls the probability of slipping either right or left of current state. Each side-slip has probability beta/2, while the intended move has probability 1-beta. As beta increases, movement becomes less predictable and reaching the goal becomes harder.
 
-```{r env-c, ref.label="app-env-c", echo=FALSE, cache=TRUE, fig.width=9.5, fig.height=4.8, out.width="\\textwidth"}
+```{r env-c, ref.label="app-env-c", echo=FALSE, cache=TRUE, dependson="env-a", fig.width=9.5, fig.height=4.8, out.width="\\textwidth"}
 ```
+
+**Observations**
+
+With beta = 0 there's no slipping, so the agent just takes the shortest path along the middle row, right next to the -1s. There's no risk in doing that. When we increase beta, the agent starts keeping its distance from the -1s and prefers the top row, since from there it can't slip into them. It happens gradually. With beta = 0.66 the whole middle row from (2, 1) to (2, 5) points up. The Q-values also get lower as beta increases, since the paths get longer and riskier.
+
+An interesting thing is that in some states the greedy policy says to walk into the wall. Take the start state (1, 1) with beta = 0.4 and 0.66: if the agent walks left into the wall, it either stays where it is or slips up into (2, 1) (slipping down is also a wall). So it can never slip right into the -1 at (1, 2). Same thing at (2, 6) with beta = 0.66, where it walks right into the wall and either stays, slips up to (3, 6), or slips down into the goal.
+
+With beta = 0.66 the intended move only happens with probability 0.34, which is about the same as each slip (0.33). So the action the agent picks basically only decides which three directions are possible, not which one actually happens. That's why "up" is chosen in the whole middle row, then the agent can end up going up, left or right, but never down into the -1.
 
 # 2. REINFORCE
 
 The REINFORCE implementation and its results are provided in `RL_Lab3_Colab.ipynb`.
 
-## 2.1 Environment D: goals distributed across the grid
+The policy is a small neural network (two hidden layers with 32 units) that takes the four coordinates $(x, y, x_{goal}, y_{goal})$ as input and outputs a probability for each of the four actions. 
+
+## 2.1 Environment D
 
 Eight goal positions are used for training and the other eight for validation.
 
 **Has the agent learned a good policy? Why or why not?**
 
-Reasonably good policy, but not reliable for every state and goal. In the validation plots, actions often point towards the goal, including unseen goals. This suggests that the network has learned to generalize. There are however some states that doesn't point toward the goal and the agent could get caught in a loop. This is a result of the 20-step limit, training happens only if the goal is reached within 20 steps and the loop doesn't get a direct negative update.
+Yes, mostly. In the validation plots almost every arrow points toward the goal, even though the agent has never seen any of these goals during training. That's because the policy is a neural network and not a lookup table. It learns a function of the coordinates, something like "move in the direction of goal minus position", and the same weights are shared across all inputs.
+
+But it's not perfect. For goal (4, 2), the state (4, 1) right next to it points down instead of right, and (3, 1) points back up. So following the arrows the agent would go back and forth between those two states. This happens because the reward is only positive so every action in a successful episode gets reinforced, even detours. Episodes where the agent doesn't reach the goal give no signal, so bad actions never get negatively rewarded.
 
 **Could Q-learning solve this task?**
 
-Yes, in principle, if we include the goal as part of the state. However, tabular Q-learning only learns the goal positions it experiences. In this environment we train on 8 goals and validation on the other 8, meaning it won't generalize on the unseen goals. We would need to train on them too.
+Yes, if we include the goal as part of the state. But tabular Q-learning can't generalize. Every (state, goal) combination has its own entries in the table, so the Q-values for the 8 validation goals would never be updated and stay at 0, which gives a random policy there. We would have to train on all 16 goals.
 
-## 2.2 Environment E: goals restricted to one row
+The generalization comes from using a neural network not from REINFORCE itself. Q-learning with a neural network instead of a table would be able to generalize in the same way.
 
-Training goals are restricted to the top row, while validation goals are in other rows.
+## 2.2 Environment E
 
-**Has the agent learned a good policy? If the results differ from Environment D, why?**
+Training goals are all in the top row, while the three validation goals (3, 4), (2, 3) and (1, 1) are in the rows below.
 
-Poor policy. In this environment the agent only trains on goals whose first coordinate is 4 (top row). It gets examples of moving toward goals in that row, but no training signal for moving toward a goal on the rows below.
+**Has the agent learned a good policy? Why or why not?**
+
+No. Looking at the validation plots the network only learned to move toward the right column, but not toward the right row. During training the goal row was always 4, so the network never saw that input change and had no way to learn that it matters. And "go up" was always a good move during training, so that's what it does everywhere.
+
+**If the results obtained for environments D and E differ, explain why.**
+
+They differ a lot. In D the training goals cover every row and column, so the validation goals are new combinations of values the network has already seen. In E the goal row never changes during training, so the validation goals have row values the network has never seen. Generalization only works if the training data has enough variation.
 
 # Appendix A: R Code
 
@@ -266,8 +300,8 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
     q_table[state[1], state[2], action] <<-
       q_table[state[1], state[2], action] + alpha * delta
     
-    # episode correction accumulated
-    episode_correction <- episode_correction + alpha * delta
+    # accumulate the TD correction term R + gamma*max_a Q(S',a) - Q(S,A) (unscaled by alpha)
+    episode_correction <- episode_correction + delta
     # update state
     state <- new_state
     
@@ -287,6 +321,8 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
 #####################################################################################################
 
 # Environment A (learning)
+
+set.seed(12345)
 
 H <- 5
 W <- 7
@@ -311,6 +347,8 @@ for(i in 1:10000){
 
 ```{r app-env-b-eps05, eval=FALSE, echo=params$show_code}
 # Environment B (the effect of epsilon and gamma)
+
+set.seed(12345)
 
 H <- 7
 W <- 8
@@ -351,6 +389,8 @@ for(j in c(0.5,0.75,0.95)){
 ```
 
 ```{r app-env-b-eps01, eval=FALSE, echo=params$show_code}
+set.seed(12345)
+
 for(j in c(0.5,0.75,0.95)){
   q_table <- array(0,dim = c(H,W,4))
   reward <- NULL
@@ -372,6 +412,8 @@ for(j in c(0.5,0.75,0.95)){
 
 ```{r app-env-c, eval=FALSE, echo=params$show_code}
 # Environment C (the effect of beta).
+
+set.seed(12345)
 
 H <- 3
 W <- 6
