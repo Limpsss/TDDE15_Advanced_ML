@@ -1,6 +1,6 @@
 ---
 title: "Lab 3: Reinforcement Learning"
-author: "Your Name"
+author: "Linus Göransson - lingo978"
 date: "`r Sys.Date()`"
 output: pdf_document
 geometry: margin=0.55in
@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 
 # 1. Q-learning
 
-The grid-world is a fully observable, episodic Markov decision process. The agent receives the reward of the state it enters, and any non-zero-reward state ends the episode. The Q-learning implementation, including the epsilon-greedy policy, random tie-breaking, transition model and temporal-difference update, is listed in Appendix A.1.
+The grid-world is a fully observable, episodic Markov decision process. The agent receives the reward of the state it enters, and any non-zero-reward state ends the episode. The Q-learning implementation, including the epsilon-greedy policy, random tie-breaking, transition model and temporal-difference update, is in Appendix A.1 code.
 
 ## 1.1 Environment A
 
@@ -84,11 +84,9 @@ Environment C places a +10 reward beyond a sequence of negative-reward states. T
 
 **Observations**
 
-With beta = 0 there's no slipping, so the agent just takes the shortest path along the middle row, right next to the -1s. There's no risk in doing that. When we increase beta, the agent starts keeping its distance from the -1s and prefers the top row, since from there it can't slip into them. It happens gradually. With beta = 0.66 the whole middle row from (2, 1) to (2, 5) points up. The Q-values also get lower as beta increases, since the paths get longer and riskier.
+With beta = 0 theres no slipping, so the agent just takes the shortest path along the middle row, right next to the -1s. When we increase beta, the agent starts keeping its distance from the -1s and prefers the top row, since from there it can't slip into them. It happens gradually. With beta = 0.66 the whole middle row from (2, 1) to (2, 5) points up. The Q-values also get lower as beta increases, since the paths get longer and riskier.
 
 An interesting thing is that in some states the greedy policy says to walk into the wall. Take the start state (1, 1) with beta = 0.4 and 0.66: if the agent walks left into the wall, it either stays where it is or slips up into (2, 1) (slipping down is also a wall). So it can never slip right into the -1 at (1, 2). Same thing at (2, 6) with beta = 0.66, where it walks right into the wall and either stays, slips up to (3, 6), or slips down into the goal.
-
-With beta = 0.66 the intended move only happens with probability 0.34, which is about the same as each slip (0.33). So the action the agent picks basically only decides which three directions are possible, not which one actually happens. That's why "up" is chosen in the whole middle row, then the agent can end up going up, left or right, but never down into the -1.
 
 # 2. REINFORCE
 
@@ -300,7 +298,7 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
     q_table[state[1], state[2], action] <<-
       q_table[state[1], state[2], action] + alpha * delta
     
-    # accumulate the TD correction term R + gamma*max_a Q(S',a) - Q(S,A) (unscaled by alpha)
+    # accumulate the TD correction term R + gamma*max_a Q(S',a) - Q(S,A)
     episode_correction <- episode_correction + delta
     # update state
     state <- new_state
