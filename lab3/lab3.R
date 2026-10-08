@@ -167,8 +167,8 @@ q_learning <- function(start_state, epsilon = 0.5, alpha = 0.1, gamma = 0.95,
     q_table[state[1], state[2], action] <<-
       q_table[state[1], state[2], action] + alpha * delta
     
-    # episode correction accumulated
-    episode_correction <- episode_correction + alpha * delta
+    # accumulate the TD correction term R + gamma*max_a Q(S',a) - Q(S,A) (unscaled by alpha)
+    episode_correction <- episode_correction + delta
     # update state
     state <- new_state
     
