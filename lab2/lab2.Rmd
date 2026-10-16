@@ -1,6 +1,6 @@
 ---
 title: "Lab 2: Hidden Markov Models"
-author: "Your Name"
+author: "Linus Göransson - lingo978"
 date: "`r Sys.Date()`"
 output: pdf_document
 ---

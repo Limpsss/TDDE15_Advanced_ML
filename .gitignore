@@ -3,3 +3,9 @@
 .RData
 .Rproj.user
 *.DS_Store
+# knitr output
+*_cache/
+*_files/
+
+# editor
+*.swp
